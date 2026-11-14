@@ -5,31 +5,13 @@
     <section class="hero">
       <p class="eyebrow">TODAY'S MENU</p>
       <h1>好好吃饭，<br>认真生活。</h1>
-      <p>分类导航、菜品和套餐将由 B、C 模块负责人接入。</p>
+      <p>选择喜欢的分类，看看今天有什么好吃的。</p>
     </section>
 
-    <section class="module-list">
-      <h2>页面框架已就位</h2>
-      <div class="module-row">
-        <span class="module-index">01</span>
-        <div>
-          <strong>菜品展示</strong>
-          <p>B 负责人接入分类和菜品接口</p>
-        </div>
-      </div>
-      <div class="module-row">
-        <span class="module-index">02</span>
-        <div>
-          <strong>套餐展示</strong>
-          <p>C 负责人接入套餐和套餐菜品接口</p>
-        </div>
-      </div>
-      <div class="module-row">
-        <span class="module-index">03</span>
-        <div>
-          <strong>下单与购物车</strong>
-          <p>D、E 负责人接入对应业务</p>
-        </div>
+    <section class="menu-section">
+      <div class="menu-frame">
+        <category-nav @change="handleCategoryChange" />
+        <dish-list :category-id="activeCategoryId" @add-cart="handleAddCart" />
       </div>
     </section>
 
@@ -43,8 +25,28 @@
 </template>
 
 <script>
+import CategoryNav from '../components/CategoryNav'
+import DishList from '../components/DishList'
+
 export default {
-  name: 'CustomerHome'
+  name: 'CustomerHome',
+  components: {
+    CategoryNav,
+    DishList
+  },
+  data() {
+    return {
+      activeCategoryId: null
+    }
+  },
+  methods: {
+    handleCategoryChange(categoryId) {
+      this.activeCategoryId = categoryId
+    },
+    handleAddCart() {
+      this.$toast('购物车模块接入后即可加购')
+    }
+  }
 }
 </script>
 
@@ -83,36 +85,18 @@ export default {
   line-height: 1.7;
 }
 
-.module-list {
-  padding: 30px 24px;
+.menu-section {
+  padding: 16px 0 64px;
+  background: #fff;
 }
 
-.module-list h2 {
-  margin: 0 0 10px;
-  font-size: 18px;
-}
-
-.module-row {
-  display: grid;
-  grid-template-columns: 40px 1fr;
-  gap: 12px;
-  padding: 20px 0;
-  border-bottom: 1px solid #e7e9ec;
-}
-
-.module-index {
-  color: #f28a2e;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.module-row strong {
-  font-size: 15px;
-}
-
-.module-row p {
-  margin: 6px 0 0;
-  color: #7b8492;
-  font-size: 12px;
+.menu-frame {
+  display: flex;
+  min-height: 520px;
+  height: calc(100vh - 315px);
+  max-width: 720px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-top: 1px solid #f2f3f5;
 }
 </style>
