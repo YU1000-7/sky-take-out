@@ -223,6 +223,81 @@
 `GET /user/dish/list?categoryId={id}`
 
 只返回起售菜品，元素含 `flavors`，供 H5 规格选择弹窗使用。
+## C 端用户与地址簿
+
+C 端接口统一使用客户 JWT，请求头为 `token`。登录接口除外。
+
+### 客户手机号登录
+
+`POST /user/user/login`
+
+请求体：
+
+```json
+{
+  "phone": "13800138000"
+}
+```
+
+响应 `data`：
+
+```json
+{
+  "id": 1,
+  "phone": "13800138000",
+  "name": "用户8000",
+  "token": "eyJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+手机号不存在时会自动创建客户记录。
+
+### 新增地址
+
+`POST /user/addressBook`
+
+```json
+{
+  "consignee": "张三",
+  "sex": "男",
+  "phone": "13800138000",
+  "provinceCode": "110000",
+  "provinceName": "北京市",
+  "cityCode": "110100",
+  "cityName": "北京市",
+  "districtCode": "110101",
+  "districtName": "东城区",
+  "detail": "示例小区 1 号楼 101",
+  "label": "家",
+  "isDefault": 1
+}
+```
+
+首个地址自动设为默认地址。
+
+### 修改地址
+
+`PUT /user/addressBook`
+
+请求体在新增字段基础上携带 `id`。
+
+### 删除地址
+
+`DELETE /user/addressBook?id={id}`
+
+### 查询当前用户地址列表
+
+`GET /user/addressBook/list`
+
+### 根据 ID 查询地址
+
+`GET /user/addressBook/{id}`
+
+### 设置默认地址
+
+`PUT /user/addressBook/default?id={id}`
+
+所有地址操作均校验 `userId`，禁止跨客户读取、修改或删除。
 
 ## 公共接口
 
@@ -238,9 +313,10 @@
 
 ## 其他模块接口
 
-完整接口以原始《api接口文档》为准。当前项目已预留以下模块目录和路由：
+完整接口以原始《api接口文档》为准。DTO/VO 已统一预置在 `server/sky-pojo`，其他负责人应在现有模型上继续实现，不得重复创建同义类。
 
 - B 端：套餐、订单、报表
-- C 端：用户、地址簿、购物车、套餐查询、订单
+- C 端：购物车、套餐查询、订单
+- 跨模块商品明细同时支持 `dishId` 与 `setmealId`
 
-未实现的接口不得由前端先行假定字段。需要增减字段时先在本文件登记。
+未实现的接口不得由前端先行假定字段。需要增减字段时先在本文件和 `docs/dto-contract.md` 登记。
