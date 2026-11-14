@@ -13,7 +13,7 @@ const routes = [
   {
     path: '/cart',
     component: () => import('../views/Placeholder.vue'),
-    meta: { title: '购物车', owner: 'E' }
+    meta: { title: '购物车', owner: 'C' }
   },
   {
     path: '/orders',
@@ -22,19 +22,37 @@ const routes = [
   },
   {
     path: '/address',
-    component: () => import('../views/Placeholder.vue'),
-    meta: { title: '地址簿', owner: 'E' }
+    component: () => import('../views/AddressBook.vue'),
+    meta: { title: '地址簿' }
   },
   {
     path: '/login',
-    component: () => import('../views/Placeholder.vue'),
-    meta: { title: '客户登录', owner: 'E' }
+    component: () => import('../views/Login.vue'),
+    meta: { title: '客户登录', public: true }
+  },
+  {
+    path: '/address/edit/:id?',
+    component: () => import('../views/AddressEdit.vue'),
+    meta: { title: '编辑地址' }
   }
 ]
 
 const router = new VueRouter({
   mode: 'hash',
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('sky_customer_token')
+  if (!to.meta.public && !token) {
+    next({ path: '/login', query: { redirect: to.fullPath } })
+    return
+  }
+  if (to.path === '/login' && token) {
+    next('/home')
+    return
+  }
+  next()
 })
 
 router.afterEach(to => {
