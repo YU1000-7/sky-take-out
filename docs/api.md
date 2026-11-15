@@ -208,6 +208,112 @@
 
 `status`：`1` 起售，`0` 停售。若该菜品被起售中的套餐关联，不允许停售。
 
+## B 端套餐模块
+
+套餐与 `setmeal_dish` 的写入在同一事务内完成；套餐内菜品为整体替换语义（修改时先删后插）。
+
+### 1. 新增套餐
+
+`POST /admin/setmeal`
+
+```json
+{
+  "name": "双人特惠餐",
+  "categoryId": 2,
+  "price": 6800,
+  "image": "http://xxx/xxx.jpg",
+  "description": "双人套餐",
+  "status": 1,
+  "setmealDishes": [
+    { "dishId": 1, "copies": 1 },
+    { "dishId": 2, "copies": 1 }
+  ]
+}
+```
+
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| name | 是 | 最长 64 字符 |
+| categoryId | 是 | 必须是 `category.type = 2` 的套餐分类 |
+| price | 是 | 单位分，必须大于 0 |
+| image | 否 | 图片地址，建议走公共上传接口 |
+| description | 否 | 最长 255 字符 |
+| status | 否 | 1 起售，0 停售；不传按停售处理 |
+| setmealDishes | 是 | 至少 1 个菜品，同一菜品不可重复 |
+
+响应：`{"code":1,"msg":"新增套餐成功","data":null}`
+
+### 2. 修改套餐
+
+`PUT /admin/setmeal`
+
+请求体同新增，必须携带 `id`。响应 `msg` 为 `修改成功`。
+
+### 3. 删除套餐（批量）
+
+`DELETE /admin/setmeal?ids=1,2`
+
+删除规则（不满足时返回 `code=0` 并给出原因）：
+
+1. 起售中的套餐不能删除，必须先停售。
+2. 已被客户加入购物车的套餐不能删除，建议改为停售。
+3. 已被有效订单（状态 1/2/3）引用的套餐不能删除，建议改为停售。
+
+响应：`{"code":1,"msg":"删除成功","data":null}`
+
+### 4. 套餐分页查询
+
+`GET /admin/setmeal/page`
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| page | 否 | 默认 1 |
+| pageSize | 否 | 默认 10，最大 100 |
+| name | 否 | 套餐名称模糊查询 |
+| categoryId | 否 | 套餐分类 |
+| status | 否 | 1 起售，0 停售 |
+
+响应 `data.records` 每项：
+
+```json
+{
+  "id": 1,
+  "name": "双人特惠餐",
+  "categoryId": 2,
+  "categoryName": "双人套餐",
+  "price": 6800,
+  "image": "xxx",
+  "description": "双人套餐",
+  "status": 1,
+  "updateTime": "2026-11-04 12:00:00",
+  "setmealDishes": null
+}
+```
+
+分页结果不返回 `setmealDishes`，需要详情时调用下一个接口。
+
+### 5. 根据 ID 查询套餐（含套餐菜品）
+
+`GET /admin/setmeal/{id}`
+
+`data.setmealDishes` 每项：
+
+```json
+{ "dishId": 1, "dishName": "鱼香肉丝", "copies": 1, "price": 3800, "image": "xxx", "dishStatus": 1 }
+```
+
+`dishStatus` 为菜品当前状态，菜品已被删除时为 `null`，便于后台发现套餐内已失效的菜品。
+
+### 6. 套餐起售停售
+
+`PUT /admin/setmeal/status/{status}?id={id}`
+
+`status`：`1` 起售，`0` 停售。
+
+起售时校验：套餐内必须有菜品，且所含菜品全部处于起售状态，否则返回业务异常。
+
+响应：`{"code":1,"msg":"状态修改成功","data":null}`
+
 ## C 端分类与菜品浏览
 
 这两个接口免登录，客户端未登录也能浏览菜单。
@@ -223,81 +329,95 @@
 `GET /user/dish/list?categoryId={id}`
 
 只返回起售菜品，元素含 `flavors`，供 H5 规格选择弹窗使用。
-## C 端用户与地址簿
 
-C 端接口统一使用客户 JWT，请求头为 `token`。登录接口除外。
+## C 端套餐查询
 
-### 客户手机号登录
+### 1. 根据分类 ID 查询套餐
 
-`POST /user/user/login`
+`GET /user/setmeal/list?categoryId={categoryId}`
 
-请求体：
-
-```json
-{
-  "phone": "13800138000"
-}
-```
+`categoryId` 可选，仅返回 `status=1` 的起售套餐；缺省时返回全部起售套餐。
 
 响应 `data`：
 
 ```json
-{
-  "id": 1,
-  "phone": "13800138000",
-  "name": "用户8000",
-  "token": "eyJhbGciOiJIUzI1NiJ9..."
-}
+[{ "id": 1, "name": "双人特惠餐", "categoryId": 2, "image": "xxx", "price": 6800, "description": "双人套餐" }]
 ```
 
-手机号不存在时会自动创建客户记录。
+### 2. 查询套餐内菜品
 
-### 新增地址
+`GET /user/setmeal/dish/{id}`
 
-`POST /user/addressBook`
+只返回仍然存在且起售的菜品。套餐已停售时返回业务异常。
+
+响应 `data`：
+
+```json
+[{ "id": 1, "name": "鱼香肉丝", "image": "xxx", "price": 3800, "copies": 1 }]
+```
+
+## C 端购物车模块
+
+同一购物车同时支持菜品和套餐，`dishId` 与 `setmealId` 二选一。加购时写入名称、图片和单价快照，后续商品改价不影响购物车已有记录。
+
+### 1. 添加购物车
+
+`POST /user/shoppingCart`
 
 ```json
 {
-  "consignee": "张三",
-  "sex": "男",
-  "phone": "13800138000",
-  "provinceCode": "110000",
-  "provinceName": "北京市",
-  "cityCode": "110100",
-  "cityName": "北京市",
-  "districtCode": "110101",
-  "districtName": "东城区",
-  "detail": "示例小区 1 号楼 101",
-  "label": "家",
-  "isDefault": 1
+  "dishId": 1,
+  "setmealId": null,
+  "dishFlavor": "微辣"
 }
 ```
 
-首个地址自动设为默认地址。
+| 规则 | 说明 |
+| --- | --- |
+| 商品标识 | `dishId`、`setmealId` 必须且只能传一个 |
+| 菜品口味 | 仅菜品使用，空串按未选口味处理 |
+| 合并规则 | 同一客户、同一菜品且同一口味合并为一条并累加数量；同一套餐合并为一条 |
+| 数量上限 | 单个商品最多 99 份 |
+| 状态校验 | 菜品或套餐必须处于起售状态 |
 
-### 修改地址
+响应：`{"code":1,"msg":"添加成功","data":null}`
 
-`PUT /user/addressBook`
+### 2. 购物车减少商品
 
-请求体在新增字段基础上携带 `id`。
+`PUT /user/shoppingCart/sub`
 
-### 删除地址
+请求体同上。数量减到 0 时自动移除该记录；购物车中不存在该商品时返回业务异常。
 
-`DELETE /user/addressBook?id={id}`
+响应：`{"code":1,"msg":"减少成功","data":null}`
 
-### 查询当前用户地址列表
+### 3. 查询购物车列表
 
-`GET /user/addressBook/list`
+`GET /user/shoppingCart/list`
 
-### 根据 ID 查询地址
+响应 `data`：
 
-`GET /user/addressBook/{id}`
+```json
+[
+  {
+    "id": 1,
+    "dishId": 1,
+    "setmealId": null,
+    "name": "鱼香肉丝",
+    "image": "xxx",
+    "dishFlavor": "微辣",
+    "number": 2,
+    "amount": 3800
+  }
+]
+```
 
-### 设置默认地址
+`amount` 为单价快照（分），订单金额按 `number * amount` 计算。`dishId`、`setmealId` 供 D 模块提交订单时区分商品类型。
 
-`PUT /user/addressBook/default?id={id}`
+### 4. 清空购物车
 
-所有地址操作均校验 `userId`，禁止跨客户读取、修改或删除。
+`DELETE /user/shoppingCart/clean`
+
+响应：`{"code":1,"msg":"清空购物车成功","data":null}`
 
 ## 公共接口
 
@@ -313,10 +433,9 @@ C 端接口统一使用客户 JWT，请求头为 `token`。登录接口除外。
 
 ## 其他模块接口
 
-完整接口以原始《api接口文档》为准。DTO/VO 已统一预置在 `server/sky-pojo`，其他负责人应在现有模型上继续实现，不得重复创建同义类。
+完整接口以原始《api接口文档》为准。当前项目已预留以下模块目录和路由：
 
 - B 端：套餐、订单、报表
-- C 端：购物车、套餐查询、订单
-- 跨模块商品明细同时支持 `dishId` 与 `setmealId`
+- C 端：用户、地址簿、购物车、套餐查询、订单
 
-未实现的接口不得由前端先行假定字段。需要增减字段时先在本文件和 `docs/dto-contract.md` 登记。
+未实现的接口不得由前端先行假定字段。需要增减字段时先在本文件登记。

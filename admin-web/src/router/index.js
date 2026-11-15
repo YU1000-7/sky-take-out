@@ -32,6 +32,12 @@ const routes = [
         name: 'Dish',
         component: () => import('../views/dish/index.vue'),
         meta: { title: '菜品管理' }
+      },
+      {
+        path: 'setmeal',
+        name: 'Setmeal',
+        component: () => import('../views/setmeal/index.vue'),
+        meta: { title: '套餐管理' }
       }
     ]
   },

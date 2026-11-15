@@ -2,13 +2,14 @@ package com.sky.dto;
 
 import lombok.Data;
 
-import java.io.Serializable;
-
+/**
+ * 套餐分页查询入参。
+ */
 @Data
-public class SetmealPageQueryDTO implements Serializable {
+public class SetmealPageQueryDTO {
 
-    private Integer page;
-    private Integer pageSize;
+    private Integer page = 1;
+    private Integer pageSize = 10;
     private String name;
     private Long categoryId;
     private Integer status;

@@ -22,6 +22,10 @@
           <i class="el-icon-dish" />
           <span>菜品管理</span>
         </router-link>
+        <router-link :class="['nav-item', { active: $route.path === '/setmeal' }]" to="/setmeal">
+          <i class="el-icon-food" />
+          <span>套餐管理</span>
+        </router-link>
       </nav>
 
       <div class="sidebar-note">
