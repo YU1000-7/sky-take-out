@@ -11,6 +11,8 @@
 - Vue2 管理后台和客户 H5 基础工程
 - A 负责的员工模块完整闭环
 - 默认管理员初始化、JWT 鉴权和统一异常处理
+- E 负责的客户登录和地址簿完整闭环
+- B/C/D/E 的 DTO/VO 与状态枚举契约
 
 ## 目录
 
@@ -90,6 +92,7 @@ Windows 电脑可直接使用项目内的便携环境：
 ## 接口与协作
 
 - 接口契约：[docs/api.md](docs/api.md)
+- DTO/VO 契约：[docs/dto-contract.md](docs/dto-contract.md)
 - 开发计划：[docs/plan.md](docs/plan.md)
 - A 模块说明：[docs/A_员工模块交付说明.md](docs/A_员工模块交付说明.md)
 - 运行与交接：[docs/运行验证与接力说明.md](docs/运行验证与接力说明.md)
