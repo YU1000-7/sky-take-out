@@ -11,14 +11,25 @@ const routes = [
     meta: { title: '点餐' }
   },
   {
+    // 购物车页属于 C 模块，本分支（严格基于 dev）不包含，先用占位页；C 合并后改回 Cart.vue。
     path: '/cart',
     component: () => import('../views/Placeholder.vue'),
     meta: { title: '购物车', owner: 'C' }
   },
   {
+    path: '/checkout',
+    component: () => import('../views/Checkout.vue'),
+    meta: { title: '确认订单' }
+  },
+  {
     path: '/orders',
-    component: () => import('../views/Placeholder.vue'),
-    meta: { title: '我的订单', owner: 'D' }
+    component: () => import('../views/Orders.vue'),
+    meta: { title: '我的订单' }
+  },
+  {
+    path: '/orders/:id',
+    component: () => import('../views/OrderDetail.vue'),
+    meta: { title: '订单详情' }
   },
   {
     path: '/address',
@@ -26,14 +37,14 @@ const routes = [
     meta: { title: '地址簿' }
   },
   {
-    path: '/login',
-    component: () => import('../views/Login.vue'),
-    meta: { title: '客户登录', public: true }
-  },
-  {
     path: '/address/edit/:id?',
     component: () => import('../views/AddressEdit.vue'),
     meta: { title: '编辑地址' }
+  },
+  {
+    path: '/login',
+    component: () => import('../views/Login.vue'),
+    meta: { title: '客户登录', public: true }
   }
 ]
 

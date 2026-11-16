@@ -42,8 +42,11 @@
 
 - DTO：`OrderSubmitDTO`、`OrderPageQueryDTO`、`OrderStatusDTO`、`ReportQueryDTO`
 - VO：`OrderVO`、`OrderDetailVO`、`OrderAdminVO`、`TurnoverVO`、`DateCountVO`、`OrderStatisticsVO`、`SalesTop10VO`
+- 新增 VO：`OrderSubmitVO`（下单返回 `orderId`、订单号、金额、下单时间，对应接口文档的 `data.orderId`）
+- `OrderVO` 由 D 扩充 4 个字段：`payStatus`、`estimateDeliveryTime`、`deliveryTime`、`cancelReason`，属向后兼容新增
 - 订单明细同时支持 `dishId` 和 `setmealId`。
-
+- `OrderPageQueryDTO` 后台与 C 端共用：后台用 `number`、`beginTime`、`endTime`，C 端只用 `page`、`pageSize`、`status`。
+- `OrderStatusDTO` 用于 `PUT /admin/order/status` 统一流转入口，`status` 只接受 `2`、`3`、`4`。
 ### E 用户与地址
 
 - DTO：`UserLoginDTO`、`AddressBookDTO`、`AddressBookPageQueryDTO`
