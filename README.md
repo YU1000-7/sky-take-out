@@ -46,6 +46,9 @@
 docker compose up -d mysql redis minio
 ```
 
+空数据卷首次启动时，`init.sql` 和 `b_seed.sql` 会自动执行，直接得到
+分类、菜品、套餐和口味演示数据。已有数据卷不会重复初始化。
+
 2. 启动后端：
 
 ```powershell
@@ -79,6 +82,10 @@ Windows 电脑可直接使用项目内的便携环境：
 .\scripts\dev\start-demo.ps1
 .\scripts\dev\verify-demo.ps1
 ```
+
+首次启动且 `category` 表为空时，`start-infra.ps1` 会自动导入
+`sql/b_seed.sql`。`verify-demo.ps1` 会验证员工、MinIO、客户登录、
+地址、菜品、套餐、购物车、下单、接单、派送、完成、取消和报表。
 
 完整地址、窗口说明和下一阶段分工见
 [docs/运行验证与接力说明.md](docs/运行验证与接力说明.md)。
