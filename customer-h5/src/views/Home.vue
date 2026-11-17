@@ -5,33 +5,38 @@
     <section class="hero">
       <p class="eyebrow">TODAY'S MENU</p>
       <h1>好好吃饭，<br>认真生活。</h1>
-      <p>分类导航、菜品和套餐将由 B、C 模块负责人接入。</p>
+      <p>选择喜欢的分类，看看今天有什么好吃的。</p>
     </section>
 
-    <section class="module-list">
-      <h2>页面框架已就位</h2>
-      <div class="module-row">
-        <span class="module-index">01</span>
-        <div>
-          <strong>菜品展示</strong>
-          <p>B 负责人接入分类和菜品接口</p>
-        </div>
-      </div>
-      <div class="module-row">
-        <span class="module-index">02</span>
-        <div>
-          <strong>套餐展示</strong>
-          <p>C 负责人接入套餐和套餐菜品接口</p>
-        </div>
-      </div>
-      <div class="module-row">
-        <span class="module-index">03</span>
-        <div>
-          <strong>下单与购物车</strong>
-          <p>D、E 负责人接入对应业务</p>
-        </div>
+    <section class="menu-section">
+      <div class="menu-frame">
+        <category-nav @change="handleCategoryChange" />
+        <dish-list
+          v-if="activeType === 1"
+          :category-id="activeCategoryId"
+          @add-cart="handleAddCart"
+        />
+        <setmeal-list
+          v-else
+          :category-id="activeCategoryId"
+          @add-cart="handleAddCart"
+        />
       </div>
     </section>
+
+    <transition name="slide-up">
+      <div v-if="cart.count" class="cart-bar">
+        <div class="cart-summary" @click="goCart">
+          <span class="cart-icon">
+            <van-icon name="shopping-cart" />
+            <em>{{ cart.count }}</em>
+          </span>
+          <span class="cart-total">￥{{ cart.total }}</span>
+          <span class="cart-tip">已选商品</span>
+        </div>
+        <van-button type="danger" size="small" round @click="goCart">去结算</van-button>
+      </div>
+    </transition>
 
     <van-tabbar route>
       <van-tabbar-item to="/home" icon="shop-o">点餐</van-tabbar-item>
@@ -43,8 +48,75 @@
 </template>
 
 <script>
+import CategoryNav from '../components/CategoryNav'
+import DishList from '../components/DishList'
+import SetmealList from '../components/SetmealList'
+import { addCart, getCartList } from '../api/cart'
+
 export default {
-  name: 'CustomerHome'
+  name: 'CustomerHome',
+  components: {
+    CategoryNav,
+    DishList,
+    SetmealList
+  },
+  data() {
+    return {
+      activeCategoryId: null,
+      activeType: 1,
+      cart: {
+        count: 0,
+        total: '0.00'
+      }
+    }
+  },
+  created() {
+    this.loadCart()
+  },
+  methods: {
+    handleCategoryChange(categoryId, category) {
+      this.activeCategoryId = categoryId
+      this.activeType = (category && category.type) || 1
+    },
+    /**
+     * 菜品与套餐共用同一个加购入口：payload 带 setmealId 即为套餐。
+     */
+    async handleAddCart(payload) {
+      if (!payload) {
+        return
+      }
+      const data = payload.setmealId
+        ? { setmealId: payload.setmealId }
+        : { dishId: payload.dishId, dishFlavor: payload.dishFlavor || null }
+
+      if (!data.setmealId && !data.dishId) {
+        return
+      }
+
+      try {
+        await addCart(data)
+        this.$toast('已加入购物车')
+        this.loadCart()
+      } catch (e) {
+        this.$toast(e.message || '加购失败')
+      }
+    },
+    async loadCart() {
+      try {
+        const carts = (await getCartList()) || []
+        this.cart = {
+          count: carts.reduce((sum, item) => sum + (item.number || 0), 0),
+          total: (carts.reduce((sum, item) => sum + (item.number || 0) * (item.amount || 0), 0) / 100).toFixed(2)
+        }
+      } catch (e) {
+        // 未登录或接口未就绪时不打扰用户，悬浮条保持隐藏。
+        this.cart = { count: 0, total: '0.00' }
+      }
+    },
+    goCart() {
+      this.$router.push('/cart')
+    }
+  }
 }
 </script>
 
@@ -83,36 +155,88 @@ export default {
   line-height: 1.7;
 }
 
-.module-list {
-  padding: 30px 24px;
+.menu-section {
+  padding: 16px 0 64px;
+  background: #fff;
 }
 
-.module-list h2 {
-  margin: 0 0 10px;
-  font-size: 18px;
+.menu-frame {
+  display: flex;
+  min-height: 520px;
+  height: calc(100vh - 315px);
+  max-width: 720px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-top: 1px solid #f2f3f5;
 }
 
-.module-row {
-  display: grid;
-  grid-template-columns: 40px 1fr;
+.cart-bar {
+  position: fixed;
+  right: 12px;
+  bottom: 62px;
+  left: 12px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 696px;
+  margin: 0 auto;
+  padding: 9px 12px 9px 16px;
+  color: #fff;
+  background: #202938;
+  border-radius: 28px;
+  box-shadow: 0 8px 22px rgba(32, 41, 56, 0.28);
+}
+
+.cart-summary {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  padding: 20px 0;
-  border-bottom: 1px solid #e7e9ec;
+  min-width: 0;
 }
 
-.module-index {
-  color: #f28a2e;
-  font-size: 12px;
-  font-weight: 700;
+.cart-icon {
+  position: relative;
+  display: inline-flex;
 }
 
-.module-row strong {
-  font-size: 15px;
+.cart-icon .van-icon {
+  font-size: 24px;
 }
 
-.module-row p {
-  margin: 6px 0 0;
-  color: #7b8492;
-  font-size: 12px;
+.cart-icon em {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 16px;
+  padding: 0 4px;
+  color: #fff;
+  background: #ee0a24;
+  border-radius: 9px;
+  font-size: 10px;
+  font-style: normal;
+  line-height: 16px;
+  text-align: center;
+}
+
+.cart-total {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.cart-tip {
+  color: #9aa4b2;
+  font-size: 11px;
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.24s ease, opacity 0.24s ease;
+}
+
+.slide-up-enter,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(16px);
 }
 </style>

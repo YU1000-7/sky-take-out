@@ -58,11 +58,11 @@ if (-not (Wait-TcpPort -Port 8082 -TimeoutSeconds 60)) {
 Write-Host ''
 Write-Host 'Demo is ready:'
 Write-Host '  Admin:  http://127.0.0.1:8081/#/login'
-Write-Host '  H5:     http://127.0.0.1:8082/#/home'
+Write-Host '  H5:     http://127.0.0.1:8082/#/login'
 Write-Host '  API:    http://127.0.0.1:18080/doc.html'
 Write-Host '  Login:  admin / 123456'
 
 if (-not $NoBrowser) {
     Start-Process 'http://127.0.0.1:8081/#/login'
-    Start-Process 'http://127.0.0.1:8082/#/home'
+    Start-Process 'http://127.0.0.1:8082/#/login'
 }

@@ -13,22 +13,32 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
     @Override
     public void insertFill(MetaObject metaObject) {
         LocalDateTime now = LocalDateTime.now();
-        strictInsertFill(metaObject, "createTime", LocalDateTime.class, now);
-        strictInsertFill(metaObject, "updateTime", LocalDateTime.class, now);
+        if (metaObject.hasSetter("createTime")) {
+            strictInsertFill(metaObject, "createTime", LocalDateTime.class, now);
+        }
+        if (metaObject.hasSetter("updateTime")) {
+            strictInsertFill(metaObject, "updateTime", LocalDateTime.class, now);
+        }
 
         Long currentId = BaseContext.getCurrentId();
         if (currentId != null) {
-            strictInsertFill(metaObject, "createUser", Long.class, currentId);
-            strictInsertFill(metaObject, "updateUser", Long.class, currentId);
+            if (metaObject.hasSetter("createUser")) {
+                strictInsertFill(metaObject, "createUser", Long.class, currentId);
+            }
+            if (metaObject.hasSetter("updateUser")) {
+                strictInsertFill(metaObject, "updateUser", Long.class, currentId);
+            }
         }
     }
 
     @Override
     public void updateFill(MetaObject metaObject) {
-        metaObject.setValue("updateTime", LocalDateTime.now());
+        if (metaObject.hasSetter("updateTime")) {
+            metaObject.setValue("updateTime", LocalDateTime.now());
+        }
 
         Long currentId = BaseContext.getCurrentId();
-        if (currentId != null) {
+        if (currentId != null && metaObject.hasSetter("updateUser")) {
             metaObject.setValue("updateUser", currentId);
         }
     }

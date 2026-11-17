@@ -13,13 +13,49 @@ const routes = [
   {
     path: '/',
     component: () => import('../views/layout/index.vue'),
-    redirect: '/employee',
+    redirect: '/dashboard',
     children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () => import('../views/dashboard/index.vue'),
+        meta: { title: '仪表盘' }
+      },
+      {
+        path: 'order',
+        name: 'Order',
+        component: () => import('../views/order/index.vue'),
+        meta: { title: '订单管理' }
+      },
+      {
+        path: 'report',
+        name: 'Report',
+        component: () => import('../views/report/index.vue'),
+        meta: { title: '营业报表' }
+      },
       {
         path: 'employee',
         name: 'Employee',
         component: () => import('../views/employee/index.vue'),
         meta: { title: '员工管理' }
+      },
+      {
+        path: 'category',
+        name: 'Category',
+        component: () => import('../views/category/index.vue'),
+        meta: { title: '分类管理' }
+      },
+      {
+        path: 'dish',
+        name: 'Dish',
+        component: () => import('../views/dish/index.vue'),
+        meta: { title: '菜品管理' }
+      },
+      {
+        path: 'setmeal',
+        name: 'Setmeal',
+        component: () => import('../views/setmeal/index.vue'),
+        meta: { title: '套餐管理' }
       }
     ]
   },
@@ -41,7 +77,7 @@ router.beforeEach((to, from, next) => {
     return
   }
   if (to.path === '/login' && token) {
-    next('/employee')
+    next('/dashboard')
     return
   }
   document.title = to.meta.title

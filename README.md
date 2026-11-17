@@ -4,13 +4,19 @@
 
 组员协作前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-当前版本由项目首个开发者搭建，已完成：
+当前版本已完成 A-E 核心模块，并通过真实 MySQL、Redis、MinIO 链路验证：
 
 - 仓库目录、数据库脚本和协作文档框架
 - Spring Boot 多模块后端基座
 - Vue2 管理后台和客户 H5 基础工程
 - A 负责的员工模块完整闭环
+- B 负责的分类、菜品模块与 H5 菜单浏览
+- C 负责的套餐与购物车模块（后端、B 端套餐管理页、H5 首页容器与购物车）
 - 默认管理员初始化、JWT 鉴权和统一异常处理
+- D 负责的订单与报表模块（后端、B 端订单管理/仪表盘/营业报表、H5 确认订单与订单页）
+- E 负责的客户登录和地址簿完整闭环
+- B/C/D/E 的 DTO/VO 与状态枚举契约
+- 后端 69 项自动化测试、GitHub Actions、后端 JAR 打包和两个前端生产构建
 
 ## 目录
 
@@ -92,6 +98,9 @@ Windows 电脑可直接使用项目内的便携环境：
 - 接口契约：[docs/api.md](docs/api.md)
 - 开发计划：[docs/plan.md](docs/plan.md)
 - A 模块说明：[docs/A_员工模块交付说明.md](docs/A_员工模块交付说明.md)
+- D 模块说明：[docs/D_订单报表交付说明.md](docs/D_订单报表交付说明.md)
+- C 模块说明：[docs/C_套餐购物车交付说明.md](docs/C_套餐购物车交付说明.md)
+- C 与 B 合并记录：[docs/C_与B合并记录.md](docs/C_与B合并记录.md)
 - 运行与交接：[docs/运行验证与接力说明.md](docs/运行验证与接力说明.md)
 - 原始需求：[docs/reference/README.md](docs/reference/README.md)
 - GitHub 发布：[docs/GitHub发布与组员接入.md](docs/GitHub发布与组员接入.md)

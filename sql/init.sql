@@ -73,7 +73,8 @@ CREATE TABLE IF NOT EXISTS setmeal (
     create_user BIGINT DEFAULT NULL,
     update_user BIGINT DEFAULT NULL,
     PRIMARY KEY (id),
-    KEY idx_setmeal_category (category_id)
+    KEY idx_setmeal_category (category_id),
+    KEY idx_setmeal_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='套餐表';
 
 CREATE TABLE IF NOT EXISTS setmeal_dish (
@@ -84,6 +85,7 @@ CREATE TABLE IF NOT EXISTS setmeal_dish (
     price DECIMAL(10, 2) NOT NULL COMMENT '菜品价格快照',
     copies INT NOT NULL DEFAULT 1 COMMENT '份数',
     PRIMARY KEY (id),
+    UNIQUE KEY uk_setmeal_dish (setmeal_id, dish_id),
     KEY idx_setmeal_dish_setmeal (setmeal_id),
     KEY idx_setmeal_dish_dish (dish_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='套餐菜品关联表';
@@ -111,7 +113,8 @@ CREATE TABLE IF NOT EXISTS shopping_cart (
     image VARCHAR(255) DEFAULT NULL COMMENT '图片快照',
     create_time DATETIME NOT NULL,
     PRIMARY KEY (id),
-    KEY idx_cart_user (user_id)
+    KEY idx_cart_user (user_id),
+    KEY idx_cart_user_goods (user_id, dish_id, setmeal_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='购物车表';
 
 CREATE TABLE IF NOT EXISTS address_book (

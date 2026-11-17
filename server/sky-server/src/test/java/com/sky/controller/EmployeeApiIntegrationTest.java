@@ -87,7 +87,8 @@ class EmployeeApiIntegrationTest {
                 .path("data").path("records").get(0);
         long employeeId = createdEmployee.path("id").asLong();
         String createdUpdateTime = createdEmployee.path("updateTime").asText();
-        Thread.sleep(20);
+        // 数据库 DATETIME 精度到秒，确保一次真实更新能产生不同的更新时间。
+        Thread.sleep(1100);
 
         String updateBody = objectMapper.writeValueAsString(Map.of(
                 "id", employeeId,
