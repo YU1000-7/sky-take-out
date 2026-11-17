@@ -38,4 +38,7 @@ public class OrderVO implements Serializable {
 
     /** 取消原因，仅已取消订单有值 */
     private String cancelReason;
+
+    /** 取消时间，仅已取消订单有值 */
+    private LocalDateTime cancelTime;
 }

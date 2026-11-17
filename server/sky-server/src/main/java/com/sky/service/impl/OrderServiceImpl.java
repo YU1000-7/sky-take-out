@@ -427,6 +427,7 @@ public class OrderServiceImpl implements OrderService {
         orderVO.setEstimateDeliveryTime(order.getEstimateDeliveryTime());
         orderVO.setDeliveryTime(order.getDeliveryTime());
         orderVO.setCancelReason(order.getCancelReason());
+        orderVO.setCancelTime(order.getCancelTime());
         return orderVO;
     }
 

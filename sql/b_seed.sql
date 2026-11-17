@@ -1,5 +1,5 @@
 -- ============================================================
--- B 模块演示数据（分类 / 菜品 / 口味）
+-- 演示数据（分类 / 菜品 / 口味 / 套餐）
 -- 用法：建库建表之后（sql/init.sql 已含三张表结构），再执行本文件
 -- 注意：price 单位是「分」，600 表示 6.00 元
 -- 如果重复执行会插入重复数据，先清空再跑：
@@ -30,5 +30,18 @@ UNION ALL SELECT id, '温度', '常温,冰镇' FROM dish WHERE name = '鲜榨橙
 UNION ALL SELECT id, '辣度', '微辣,中辣,特辣' FROM dish WHERE name = '鱼香肉丝'
 UNION ALL SELECT id, '忌口', '不要香菜,不要葱' FROM dish WHERE name = '鱼香肉丝'
 UNION ALL SELECT id, '辣度', '微辣,中辣,特辣' FROM dish WHERE name = '水煮牛肉';
+
+-- 套餐演示数据：H5 首页可直接展示并加入购物车
+INSERT INTO setmeal (category_id, name, price, status, description, image, create_time, update_time)
+SELECT id, '川味双人套餐', 6800, 1, '鱼香肉丝 + 水煮牛肉', NULL, NOW(), NOW()
+FROM category
+WHERE name = '人气套餐' AND type = 2
+LIMIT 1;
+
+INSERT INTO setmeal_dish (setmeal_id, dish_id, name, price, copies)
+SELECT s.id, d.id, d.name, d.price, 1
+FROM setmeal s
+JOIN dish d ON d.name IN ('鱼香肉丝', '水煮牛肉')
+WHERE s.name = '川味双人套餐';
 
 -- 图片先留空，联调时在「菜品管理」页用 /admin/common/upload 传一张，MinIO 已通

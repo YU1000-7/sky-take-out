@@ -11,9 +11,8 @@ const routes = [
     meta: { title: '点餐' }
   },
   {
-    // 购物车页属于 C 模块，本分支（严格基于 dev）不包含，先用占位页；C 合并后改回 Cart.vue。
     path: '/cart',
-    component: () => import('../views/Placeholder.vue'),
+    component: () => import('../views/Cart.vue'),
     meta: { title: '购物车', owner: 'C' }
   },
   {
