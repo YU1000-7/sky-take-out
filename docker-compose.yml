@@ -15,6 +15,7 @@ services:
     volumes:
       - sky-mysql-data:/var/lib/mysql
       - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./sql/b_seed.sql:/docker-entrypoint-initdb.d/02-b-seed.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
       interval: 10s

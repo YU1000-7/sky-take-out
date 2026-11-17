@@ -60,6 +60,23 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host 'MySQL schema is ready.'
 
+$categoryCountRaw = & $mysqlClientExe -uroot "--password=root" --batch --skip-column-names `
+    -e "SELECT COUNT(*) FROM sky_take_out.category;"
+if ($LASTEXITCODE -ne 0) {
+    throw 'Failed to query category count.'
+}
+$categoryCount = [int](@($categoryCountRaw)[-1])
+if ($categoryCount -eq 0) {
+    $seedPath = (Join-Path $ProcessRoot 'sql\b_seed.sql').Replace('\', '/')
+    & $mysqlClientExe -uroot "--password=root" '--default-character-set=utf8mb4' -e "source $seedPath"
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Failed to execute sql/b_seed.sql.'
+    }
+    Write-Host 'Demo menu data imported.'
+} else {
+    Write-Host "Demo menu data already exists: $categoryCount categories."
+}
+
 if (-not (Test-TcpPort -Port 6379)) {
     $redisLog = Join-Path $LogRoot 'redis.log'
     $redisArgs = "--port 6379 --bind 127.0.0.1 --dir `"$RedisData`" --logfile `"$redisLog`" --appendonly no --save 3600 1"
