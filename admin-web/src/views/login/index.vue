@@ -76,7 +76,7 @@ export default {
         try {
           await this.$store.dispatch('login', this.form)
           this.$message.success('登录成功')
-          this.$router.replace('/employee')
+          this.$router.replace('/dashboard')
         } catch (error) {
           this.$message.error(error.message)
         } finally {

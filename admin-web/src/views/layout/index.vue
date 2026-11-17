@@ -10,6 +10,21 @@
       </div>
 
       <nav class="nav">
+        <router-link
+          :class="['nav-item', { active: $route.path === '/dashboard' }]"
+          to="/dashboard"
+        >
+          <i class="el-icon-data-line" />
+          <span>仪表盘</span>
+        </router-link>
+        <router-link :class="['nav-item', { active: $route.path === '/order' }]" to="/order">
+          <i class="el-icon-tickets" />
+          <span>订单管理</span>
+        </router-link>
+        <router-link :class="['nav-item', { active: $route.path === '/report' }]" to="/report">
+          <i class="el-icon-s-data" />
+          <span>营业报表</span>
+        </router-link>
         <router-link :class="['nav-item', { active: $route.path === '/employee' }]" to="/employee">
           <i class="el-icon-user" />
           <span>员工管理</span>
@@ -22,12 +37,16 @@
           <i class="el-icon-dish" />
           <span>菜品管理</span>
         </router-link>
+        <router-link :class="['nav-item', { active: $route.path === '/setmeal' }]" to="/setmeal">
+          <i class="el-icon-food" />
+          <span>套餐管理</span>
+        </router-link>
       </nav>
 
       <div class="sidebar-note">
         <span>当前进度</span>
-        <strong>A · 员工模块</strong>
-        <p>其他模块由对应负责人接入。</p>
+        <strong>D · 订单与报表</strong>
+        <p>订单管理、仪表盘、营业报表已交付，H5 下单与订单页同步完成。</p>
       </div>
     </aside>
 
