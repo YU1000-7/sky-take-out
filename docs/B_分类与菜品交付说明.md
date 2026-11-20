@@ -121,3 +121,53 @@ Vue 的路由入口和 Java 的拦截器配置都只有一处，没法靠新增�
 - 菜品分页返回 `categoryName` 是新增字段，C 的套餐页和 D 的订单页可以直接用。
 - C 端浏览接口免登录；加购、下单仍然要 token。
 - 加购接口 `POST /user/shoppingCart` 不属于本模块：`DishList.vue` 只抛出 `add-cart` 事件，由首页调用。
+
+## 测试补齐（2026-11-21）
+
+新增接口级与单元测试，`mvn test` 总数从 81 涨到 114，全绿。
+
+- `CategoryApiIntegrationTest`（11 条）：新增、分页筛选、按类型查列表、修改名称与排序、**分类类型不可改**、删除空分类、**删除有菜品的分类被拒**、**删除有套餐的分类被拒**、分类不存在、无 token 401
+- `DishApiIntegrationTest`（11 条）：新增带口味并查详情、**修改时口味整体覆盖（2 组改 1 组后仍是 1 组）**、同分类重名被拒、分页按分类与状态筛选并返回 `categoryName`、**批量删除**、**起售状态删除被拒**、**被套餐关联删除被拒**、**起停售**、**被起售套餐关联停售被拒**、C 端只返回起售且免登录、非法状态值被拒
+
+为了让集成测试能跑起来，测试环境改了两处：
+
+- `schema-test.sql`：补 `dish_flavor` 表（原来没有，菜品口味相关用例无法执行）
+- `application-test.yml`：H2 连接串加 `NON_KEYWORDS=VALUE`（H2 2.x 把 `value` 当保留字，`dish_flavor.value` 会建表失败）
+
+顺带修掉一个真实缺陷：`DishServiceImpl.getById()` 之前把 `categoryName` 传成 `null`，导致菜品详情接口不返回分类名称，与 `docs/api.md` 的约定不符。现在详情和列表行为一致，集成测试里已断言。
+
+## 演示图片（2026-11-21）
+
+`b_seed.sql` 里 7 个菜品的 `image` 原本全是 `NULL`，后台和 H5 都显示“无图”。现在改成仓库自带的占位图：
+
+- `admin-web/public/dishes/*.svg`（7 张）
+- `customer-h5/public/dishes/*.svg`（7 张，内容相同）
+
+库里存的是相对路径 `/dishes/yuxiang-rousi.svg`，两个前端各自从 `public` 目录取。这样**不依赖 MinIO 也能看到图片**，演示时少一个故障点。要换真实照片，在「菜品管理」页上传后覆盖 `image` 字段即可，前端不用改。
+
+## 图片存储开关（MinIO 降级，2026-11-21）
+
+对应待补清单「MinIO 无降级」。实现取自王在 `推送文件/` 里的版本（`MinioProperties.isEnabled()` + `MinioStorageService` 内部走本地目录 + `WebMvcConfig` 的 `/uploads/**` 映射），B 这边只补了测试，没有另写一套。
+
+| 配置 | 行为 | 返回的 URL |
+| --- | --- | --- |
+| `MINIO_ENABLED=false`（默认） | 落本地磁盘 | `MINIO_LOCAL_BASE_URL` + `/images/yyyy-MM-dd/<uuid>.<ext>` |
+| `MINIO_ENABLED=true` | 走 MinIO | MinIO 的 `public-url` + `bucket/对象路径` |
+
+相关配置（`application.yml` 的 `sky.minio` 段）：
+
+- `enabled`：默认 `false`
+- `local-dir`：默认 `./uploads`
+- `local-base-url`：默认 `http://127.0.0.1:8080/uploads`
+
+> 演示环境后端跑 18080 时必须覆盖，否则图片地址指向 8080：
+> `$env:MINIO_LOCAL_BASE_URL='http://127.0.0.1:18080/uploads'`
+
+测试覆盖：
+
+- `MinioStorageServiceLocalModeTest` 8 条：落盘位置、URL 拼装、扩展名、同名不覆盖、空文件、尾斜杠、无扩展名、日期目录自动创建
+- `LocalUploadIntegrationTest` 1 条：关掉开关后真实上传 → 文件落盘 → 通过 `/uploads/**` 取回且内容一致
+- `DishImageFlowTest` 2 条：上传返回的地址能存进菜品，后台分页与 H5 列表都回显；无 token 上传 401
+
+
+

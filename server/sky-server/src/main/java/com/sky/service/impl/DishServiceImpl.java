@@ -144,7 +144,8 @@ public class DishServiceImpl implements DishService {
         if (dish == null) {
             throw new BusinessException("菜品不存在");
         }
-        DishVO vo = toVO(dish, null);
+        Category category = categoryMapper.selectById(dish.getCategoryId());
+        DishVO vo = toVO(dish, category == null ? null : category.getName());
         vo.setFlavors(listFlavors(id));
         return vo;
     }

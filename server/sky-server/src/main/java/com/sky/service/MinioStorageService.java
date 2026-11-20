@@ -11,6 +11,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -26,14 +31,10 @@ public class MinioStorageService {
             throw new IllegalArgumentException("上传文件不能为空");
         }
 
-        String originalName = StringUtils.cleanPath(
-                file.getOriginalFilename() == null ? "file" : file.getOriginalFilename());
-        String extension = "";
-        int dot = originalName.lastIndexOf('.');
-        if (dot >= 0) {
-            extension = originalName.substring(dot);
+        String objectName = buildObjectName(file);
+        if (!properties.isEnabled()) {
+            return saveToLocal(file, objectName);
         }
-        String objectName = "images/" + LocalDate.now() + "/" + UUID.randomUUID() + extension;
 
         try {
             boolean exists = minioClient.bucketExists(BucketExistsArgs.builder()
@@ -53,6 +54,41 @@ public class MinioStorageService {
                     .contentType(file.getContentType())
                     .build());
             return properties.getPublicUrl() + "/" + properties.getBucketName() + "/" + objectName;
+        } catch (Exception exception) {
+            throw new IllegalStateException("文件上传失败", exception);
+        }
+    }
+
+    private String buildObjectName(MultipartFile file) {
+        String originalName = StringUtils.cleanPath(
+                file.getOriginalFilename() == null ? "file" : file.getOriginalFilename());
+        String extension = "";
+        int dot = originalName.lastIndexOf('.');
+        if (dot >= 0) {
+            extension = originalName.substring(dot);
+        }
+        return "images/" + LocalDate.now() + "/" + UUID.randomUUID() + extension;
+    }
+
+    /**
+     * 未启用 MinIO 时落本地磁盘，返回可直接访问的 URL（/uploads/** 由 WebMvcConfig 映射）。
+     */
+    private String saveToLocal(MultipartFile file, String objectName) {
+        try {
+            Path root = Paths.get(properties.getLocalDir()).toAbsolutePath().normalize();
+            Path target = root.resolve(objectName).normalize();
+            if (!target.startsWith(root)) {
+                throw new IllegalStateException("非法的上传路径");
+            }
+            Files.createDirectories(target.getParent());
+            try (InputStream inputStream = file.getInputStream()) {
+                Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+            String baseUrl = properties.getLocalBaseUrl();
+            if (baseUrl.endsWith("/")) {
+                baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+            }
+            return baseUrl + "/" + objectName;
         } catch (Exception exception) {
             throw new IllegalStateException("文件上传失败", exception);
         }

@@ -16,13 +16,13 @@ INSERT INTO category (type, name, sort, status, create_time, update_time) VALUES
 (2, '商务套餐', 2, 1, NOW(), NOW());
 
 INSERT INTO dish (name, category_id, price, image, description, status, create_time, update_time) VALUES
-('冰镇可乐', (SELECT id FROM category WHERE name = '酒水饮料' AND type = 1), 600,  NULL, '冰爽解渴', 1, NOW(), NOW()),
-('鲜榨橙汁', (SELECT id FROM category WHERE name = '酒水饮料' AND type = 1), 1200, NULL, '当日鲜榨', 1, NOW(), NOW()),
-('扬州炒饭', (SELECT id FROM category WHERE name = '传统主食' AND type = 1), 1800, NULL, '粒粒分明', 1, NOW(), NOW()),
-('葱油拌面', (SELECT id FROM category WHERE name = '传统主食' AND type = 1), 1500, NULL, '葱香浓郁', 1, NOW(), NOW()),
-('鱼香肉丝', (SELECT id FROM category WHERE name = '川湘菜'   AND type = 1), 3800, NULL, '经典川菜', 1, NOW(), NOW()),
-('水煮牛肉', (SELECT id FROM category WHERE name = '川湘菜'   AND type = 1), 5800, NULL, '麻辣鲜香', 1, NOW(), NOW()),
-('麻婆豆腐', (SELECT id FROM category WHERE name = '川湘菜'   AND type = 1), 2800, NULL, '停售状态示例', 0, NOW(), NOW());
+('冰镇可乐', (SELECT id FROM category WHERE name = '酒水饮料' AND type = 1), 600,  '/dishes/bingzhen-kele.svg', '冰爽解渴', 1, NOW(), NOW()),
+('鲜榨橙汁', (SELECT id FROM category WHERE name = '酒水饮料' AND type = 1), 1200, '/dishes/xianzha-chengzhi.svg', '当日鲜榨', 1, NOW(), NOW()),
+('扬州炒饭', (SELECT id FROM category WHERE name = '传统主食' AND type = 1), 1800, '/dishes/yangzhou-chaofan.svg', '粒粒分明', 1, NOW(), NOW()),
+('葱油拌面', (SELECT id FROM category WHERE name = '传统主食' AND type = 1), 1500, '/dishes/congyou-banmian.svg', '葱香浓郁', 1, NOW(), NOW()),
+('鱼香肉丝', (SELECT id FROM category WHERE name = '川湘菜'   AND type = 1), 3800, '/dishes/yuxiang-rousi.svg', '经典川菜', 1, NOW(), NOW()),
+('水煮牛肉', (SELECT id FROM category WHERE name = '川湘菜'   AND type = 1), 5800, '/dishes/shuizhu-niurou.svg', '麻辣鲜香', 1, NOW(), NOW()),
+('麻婆豆腐', (SELECT id FROM category WHERE name = '川湘菜'   AND type = 1), 2800, '/dishes/mapo-doufu.svg', '停售状态示例', 0, NOW(), NOW());
 
 INSERT INTO dish_flavor (dish_id, name, value)
 SELECT id, '温度', '常温,冰镇' FROM dish WHERE name = '冰镇可乐'
@@ -44,4 +44,6 @@ FROM setmeal s
 JOIN dish d ON d.name IN ('鱼香肉丝', '水煮牛肉')
 WHERE s.name = '川味双人套餐';
 
--- 图片先留空，联调时在「菜品管理」页用 /admin/common/upload 传一张，MinIO 已通
+-- 菜品图片用仓库内自带的占位图：admin-web/public/dishes/*.svg 与 customer-h5/public/dishes/*.svg
+-- 存的是相对路径（/dishes/xxx.svg），两个前端各自从 public 目录取，不依赖 MinIO 也能显示
+-- 想换成真实照片时，在「菜品管理」页用 /admin/common/upload 上传后覆盖 image 字段即可
