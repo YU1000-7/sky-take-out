@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 class JwtUtilTest {
@@ -38,5 +39,15 @@ class JwtUtilTest {
         String userToken = jwtUtil.createUserToken(20L);
 
         assertNull(jwtUtil.parseAdminToken(userToken));
+    }
+
+    @Test
+    void shouldCreateDistinctTokensWithinSameSecond() {
+        String firstToken = jwtUtil.createAdminToken(10L);
+        String secondToken = jwtUtil.createAdminToken(10L);
+
+        assertNotEquals(firstToken, secondToken);
+        assertNotNull(jwtUtil.parseAdminToken(firstToken).get("jti", String.class));
+        assertNotNull(jwtUtil.parseAdminToken(secondToken).get("jti", String.class));
     }
 }
