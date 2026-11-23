@@ -320,6 +320,64 @@ class OrderServiceImplTest {
         assertEquals(OrderStatus.CONFIRMED.getCode(), pending.getStatus().intValue());
     }
 
+    @Test
+    void shouldRejectPendingOrderWithReason() {
+        Orders pending = order(7L, OrderStatus.PENDING.getCode());
+        when(orderMapper.selectById(7L)).thenReturn(pending);
+
+        orderService.reject(7L, "  菜品已售完  ");
+
+        assertEquals(OrderStatus.CANCELLED.getCode(), pending.getStatus().intValue(), "拒单后进入已取消");
+        assertEquals("菜品已售完", pending.getRejectionReason(), "拒单原因需要去掉首尾空格");
+        assertNotNull(pending.getCancelTime());
+        verify(orderMapper).updateById(pending);
+    }
+
+    @Test
+    void shouldUseDefaultReasonWhenRejectWithoutReason() {
+        Orders pending = order(8L, OrderStatus.PENDING.getCode());
+        when(orderMapper.selectById(8L)).thenReturn(pending);
+
+        orderService.reject(8L, "   ");
+
+        assertEquals("商家拒单", pending.getRejectionReason());
+    }
+
+    @Test
+    void shouldRejectRejectWhenMerchantAlreadyConfirmed() {
+        Orders confirmed = order(9L, OrderStatus.CONFIRMED.getCode());
+        when(orderMapper.selectById(9L)).thenReturn(confirmed);
+
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> orderService.reject(9L, "太忙了"));
+        assertEquals("订单当前状态为「已接单」，无法拒单", exception.getMessage());
+        verify(orderMapper, never()).updateById(any(Orders.class));
+    }
+
+    @Test
+    void shouldCancelTimeoutPendingOrdersInOneUpdate() {
+        when(orderMapper.update(any(Orders.class), any())).thenReturn(3);
+
+        int cancelled = orderService.cancelTimeoutOrders(15);
+
+        assertEquals(3, cancelled);
+        ArgumentCaptor<Orders> captor = ArgumentCaptor.forClass(Orders.class);
+        verify(orderMapper).update(captor.capture(), any());
+        Orders update = captor.getValue();
+        assertEquals(OrderStatus.CANCELLED.getCode(), update.getStatus().intValue());
+        assertEquals("超时未接单，系统自动取消", update.getCancelReason());
+        assertNotNull(update.getCancelTime());
+        assertNull(update.getRejectionReason(), "自动取消不是拒单，不写拒单原因");
+    }
+
+    @Test
+    void shouldFallbackToDefaultTimeoutWhenMinutesInvalid() {
+        when(orderMapper.update(any(Orders.class), any())).thenReturn(0);
+
+        assertEquals(0, orderService.cancelTimeoutOrders(0));
+        verify(orderMapper).update(any(Orders.class), any());
+    }
+
     private ShoppingCart dishCart(int number, long amount) {
         ShoppingCart cart = new ShoppingCart();
         cart.setId(1L);

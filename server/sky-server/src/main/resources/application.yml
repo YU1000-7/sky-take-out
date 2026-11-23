@@ -53,17 +53,18 @@ sky:
     admin-ttl: ${JWT_ADMIN_TTL:7200000}
     user-ttl: ${JWT_USER_TTL:7200000}
   minio:
-    # false：图片落本地磁盘（无需 MinIO 也能上传/演示）；true：走 MinIO
-    enabled: ${MINIO_ENABLED:false}
-    # 本地存储目录与对外前缀，仅 enabled=false 时生效
-    local-dir: ${MINIO_LOCAL_DIR:./uploads}
-    # 演示环境后端跑 18080 时，记得设 MINIO_LOCAL_BASE_URL=http://127.0.0.1:18080/uploads
-    local-base-url: ${MINIO_LOCAL_BASE_URL:http://127.0.0.1:8080/uploads}
     endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
     access-key: ${MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${MINIO_SECRET_KEY:minioadmin}
     bucket-name: ${MINIO_BUCKET:sky-take-out}
     public-url: ${MINIO_PUBLIC_URL:http://localhost:9000}
+  order:
+    # 订单超时未接单自动取消：默认 15 分钟、每分钟扫一次，enabled=false 可整体关闭
+    auto-cancel:
+      enabled: ${ORDER_AUTO_CANCEL_ENABLED:true}
+      timeout-minutes: ${ORDER_AUTO_CANCEL_MINUTES:15}
+      interval-ms: ${ORDER_AUTO_CANCEL_INTERVAL_MS:60000}
+      initial-delay-ms: ${ORDER_AUTO_CANCEL_INITIAL_DELAY_MS:60000}
 
 logging:
   level:

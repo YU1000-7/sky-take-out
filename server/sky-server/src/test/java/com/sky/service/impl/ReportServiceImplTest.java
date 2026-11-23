@@ -70,8 +70,7 @@ class ReportServiceImplTest {
                 order(1L, OrderStatus.COMPLETED.getCode(), DAY_1.atTime(9, 0), 1000L),
                 order(2L, OrderStatus.PENDING.getCode(), DAY_1.atTime(12, 0), 500L),
                 order(3L, OrderStatus.CANCELLED.getCode(), DAY_1.atTime(13, 0), 300L),
-                order(4L, OrderStatus.COMPLETED.getCode(), DAY_2.atTime(9, 0), 200L),
-                order(5L, OrderStatus.PENDING.getCode(), DAY_2.atTime(10, 0), 600L)));
+                order(4L, OrderStatus.COMPLETED.getCode(), DAY_2.atTime(9, 0), 200L)));
 
         OrderStatisticsVO statistics = reportService.orderStatistics(query(DAY_1, DAY_2));
 

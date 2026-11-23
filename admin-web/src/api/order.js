@@ -25,6 +25,16 @@ export function completeOrder(id) {
   return request.put('/admin/order/complete', null, { params: { id } })
 }
 
+/**
+ * 商家拒单：1 待接单 → 5 已取消，原因写入 rejection_reason。
+ * rejectionReason 为空时后端记「商家拒单」。
+ */
+export function rejectOrder(id, rejectionReason) {
+  return request.put('/admin/order/rejection', null, {
+    params: { id, rejectionReason }
+  })
+}
+
 /** 统一状态流转入口，body：{ id, status } */
 export function changeOrderStatus(data) {
   return request.put('/admin/order/status', data)
