@@ -35,10 +35,11 @@
 | C | POST | `/user/order/submit` | 提交订单（事务） |
 | C | GET | `/user/order/list` | 我的订单分页 |
 | C | GET | `/user/order/{id}` | 订单详情 |
+| B | PUT | `/admin/order/rejection` | 商家拒单（待接单 → 已取消，写拒单原因） |
 | C | PUT | `/user/order/cancel` | 取消订单（仅待接单） |
 
-> 分工表里的 12 个接口是上表除 `PUT /admin/order/status` 之外的 12 条。
-> 第 13 条是统一入口，让 `OrderStatusDTO` 这个 Day 1 冻结的 DTO 真正被使用，也方便后续扩展商家拒单。
+> 分工表里的 12 个接口是上表除 `PUT /admin/order/status` 与 `PUT /admin/order/rejection` 之外的 12 条。
+> 统一流转入口让 `OrderStatusDTO` 这个 Day 1 冻结的 DTO 真正被使用；拒单是 2026-11-19 待补清单（杨·第 1 项）补的 P2 能力，`rejection_reason` 字段不再悬空。
 
 ## 后端文件
 
@@ -78,6 +79,12 @@
 - 客户只能取消 `1` 待接单的订单；商家已接单后返回业务异常，前端按钮也只在待接单时展示。
 - 商家端不支持取消订单，`PUT /admin/order/status` 传 `5` 会被明确拒绝并提示使用客户取消接口。
 
+### 拒单与超时取消
+
+- 拒单：只有 `1` 待接单能拒，拒单后进入 `5` 已取消，原因写 `rejection_reason`；已接单及之后的状态拒绝拒单。
+- 超时取消：定时任务每分钟扫一次，`1` 待接单且下单超过 15 分钟自动取消，`cancel_reason` 记「超时未接单，系统自动取消」。
+- 退款：本期不接支付网关，拒单/取消都不触发退款，`payStatus` 保持下单时的模拟已支付。
+
 ### 提交订单
 
 1. 从 `BaseContext` 取当前客户 ID，未登录返回 `code=401`。
@@ -114,7 +121,7 @@
 | 页面 | 路径 | 说明 |
 | --- | --- | --- |
 | 仪表盘 | `/#/dashboard` | 今日营业额、今日有效订单、待接单数量、近 7 日营业额；近 7 日折线图；待接单列表可直接接单；快捷入口 |
-| 订单管理 | `/#/order` | 订单号/状态/下单时间区间筛选、分页、详情弹窗、接单/派送/完成按钮 |
+| 订单管理 | `/#/order` | 订单号/状态/下单时间区间筛选、分页、详情弹窗、接单/派送/完成按钮；待接单可「拒单」并填写原因，详情弹窗展示拒单原因 |
 | 营业报表 | `/#/report` | 日期区间（近 7 天/近 30 天快捷）、营业额柱状图、订单统计双柱图、销量 TOP10 横向柱状图、四项汇总 |
 
 新增文件：`src/api/order.js`、`src/api/report.js`、`src/utils/order.js`、
@@ -167,8 +174,9 @@
 
 已做：
 
-- 新增单元测试 `OrderServiceImplTest`（15 项）、`ReportServiceImplTest`（7 项），
-  新增接口集成测试 `OrderApiIntegrationTest`（8 项，H2 + MockMvc），共 30 项。
+- 新增单元测试 `OrderServiceImplTest`（20 项）、`ReportServiceImplTest`（7 项），
+  新增接口集成测试 `OrderApiIntegrationTest`（10 项，H2 + MockMvc），共 37 项。
+  其中拒单 3 项（正常拒单、默认原因、已接单拒单被拒）、超时取消 2 项、下单三种情况（正常/空地址/空购物车）各有覆盖。
   覆盖：下单快照与清空购物车、菜品/套餐明细区分、空购物车、他人地址、停售商品、
   非法状态流转、完整接单派送完成链路、取消规则、越权查看/取消、后台筛选、报表口径、未登录 401。
 - 全部 Java / JS 源文件做了括号与字符串配平静态检查。
@@ -213,6 +221,12 @@ customer-h5> npm install && npm run build
 | `GET /user/category/list`、`/user/dish/list` | B | **已集成** | H5 首页入口 |
 | 客户登录与 token | E | **已集成** | `/user/order/**` 由 `JwtUserInterceptor` 鉴权 |
 | 商家 token | A | **已集成** | `/admin/order/**`、`/admin/report/**` 由 `JwtAdminInterceptor` 鉴权 |
+
+## 本期范围外
+
+- 「再来一单」（`/user/order/repetition`）原始接口文档里没有定义，本次不做。
+- 退款与支付回调：模拟支付下单即已支付，拒单与取消只改状态和原因，不改 `payStatus`。
+- 超时取消的阈值与开关在 `sky.order.auto-cancel.*`（默认 15 分钟、每分钟扫描，`enabled=false` 可关闭），只对「待接单」生效。
 
 ## 与 C、E 的边界处理
 

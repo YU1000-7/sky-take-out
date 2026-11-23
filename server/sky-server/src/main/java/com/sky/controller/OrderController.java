@@ -63,6 +63,14 @@ public class OrderController {
         return Result.success("订单完成", null);
     }
 
+    @ApiOperation("商家拒单")
+    @PutMapping("/rejection")
+    public Result<Void> rejection(@RequestParam Long id,
+                                  @RequestParam(required = false) String rejectionReason) {
+        orderService.reject(id, rejectionReason);
+        return Result.success("拒单成功", null);
+    }
+
     @ApiOperation("统一订单状态流转（接单/派送/完成）")
     @PutMapping("/status")
     public Result<Void> transfer(@Valid @RequestBody OrderStatusDTO dto) {

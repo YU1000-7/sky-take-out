@@ -114,9 +114,9 @@ public class ReportServiceImpl implements ReportService {
         Map<String, Long> salesByName = new LinkedHashMap<>();
         for (int start = 0; start < orderIds.size(); start += DETAIL_CHUNK_SIZE) {
             List<Long> chunk = orderIds.subList(start, Math.min(start + DETAIL_CHUNK_SIZE, orderIds.size()));
-            List<OrderDetail> details = orderDetailMapper.selectList(Wrappers.<OrderDetail>query()
-                    .select("name", "number")
-                    .in("order_id", chunk));
+            List<OrderDetail> details = orderDetailMapper.selectList(Wrappers.<OrderDetail>lambdaQuery()
+                    .select(OrderDetail::getName, OrderDetail::getNumber)
+                    .in(OrderDetail::getOrderId, chunk));
             for (OrderDetail detail : details) {
                 long number = detail.getNumber() == null ? 1L : detail.getNumber();
                 salesByName.merge(detail.getName(), number, Long::sum);
@@ -136,12 +136,12 @@ public class ReportServiceImpl implements ReportService {
     private List<Orders> selectOrders(List<LocalDate> dates, Integer status) {
         LocalDateTime begin = dates.get(0).atStartOfDay();
         LocalDateTime endExclusive = dates.get(dates.size() - 1).plusDays(1).atStartOfDay();
-        return orderMapper.selectList(Wrappers.<Orders>query()
-                .select("id", "status", "amount", "order_time")
-                .eq(status != null, "status", status)
-                .ge("order_time", begin)
-                .lt("order_time", endExclusive)
-                .orderByAsc("order_time"));
+        return orderMapper.selectList(Wrappers.<Orders>lambdaQuery()
+                .select(Orders::getId, Orders::getStatus, Orders::getAmount, Orders::getOrderTime)
+                .eq(status != null, Orders::getStatus, status)
+                .ge(Orders::getOrderTime, begin)
+                .lt(Orders::getOrderTime, endExclusive)
+                .orderByAsc(Orders::getOrderTime));
     }
 
     private List<Orders> selectCompletedOrders(List<LocalDate> dates) {

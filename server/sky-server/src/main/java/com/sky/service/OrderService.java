@@ -65,4 +65,17 @@ public interface OrderService {
      * B 端：统一状态流转入口，供接单、派送、完成复用同一套状态校验。
      */
     void transfer(OrderStatusDTO dto);
+
+    /**
+     * B 端：拒单。只有 1 待接单可以拒单，拒单后订单进入 5 已取消，
+     * 拒单原因写入 {@code rejectionReason}，客户在订单详情里可见。
+     */
+    void reject(Long id, String rejectionReason);
+
+    /**
+     * 定时任务：把超时仍未接单的订单自动取消，返回处理条数。
+     *
+     * @param timeoutMinutes 超过多少分钟算超时，<=0 时按默认 15 分钟
+     */
+    int cancelTimeoutOrders(int timeoutMinutes);
 }

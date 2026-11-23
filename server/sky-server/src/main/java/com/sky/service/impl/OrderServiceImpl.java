@@ -58,6 +58,12 @@ public class OrderServiceImpl implements OrderService {
 
     /** 客户取消订单时写入的原因 */
     private static final String USER_CANCEL_REASON = "用户取消订单";
+    /** 商家拒单但没有填写原因时的默认值 */
+    private static final String DEFAULT_REJECTION_REASON = "商家拒单";
+    /** 超时未接单自动取消时写入的取消原因 */
+    private static final String TIMEOUT_CANCEL_REASON = "超时未接单，系统自动取消";
+    /** 自动取消的默认超时分钟数 */
+    private static final int DEFAULT_TIMEOUT_MINUTES = 15;
 
     private static final DateTimeFormatter ORDER_NUMBER_DATE = DateTimeFormatter.BASIC_ISO_DATE;
 
@@ -238,6 +244,40 @@ public class OrderServiceImpl implements OrderService {
             default:
                 throw new BusinessException("商家端只支持流转到已接单、派送中、已完成，取消订单请使用客户取消接口");
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void reject(Long id, String rejectionReason) {
+        Orders order = requireOrder(id);
+        changeStatus(order, OrderStatus.PENDING, OrderStatus.CANCELLED, "拒单");
+        String reason = normalizeText(rejectionReason);
+        order.setRejectionReason(reason == null ? DEFAULT_REJECTION_REASON : reason);
+        order.setCancelTime(LocalDateTime.now());
+        orderMapper.updateById(order);
+        log.info("商家拒单，订单号 {}，原因 {}", order.getNumber(), order.getRejectionReason());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int cancelTimeoutOrders(int timeoutMinutes) {
+        int minutes = timeoutMinutes > 0 ? timeoutMinutes : DEFAULT_TIMEOUT_MINUTES;
+        LocalDateTime deadline = LocalDateTime.now().minusMinutes(minutes);
+
+        // 一条 UPDATE 批量处理：只动「待接单」且下单时间早于 deadline 的订单，
+        // 已接单/派送中/已完成/已取消都不会被误改。
+        Orders update = new Orders();
+        update.setStatus(OrderStatus.CANCELLED.getCode());
+        update.setCancelReason(TIMEOUT_CANCEL_REASON);
+        update.setCancelTime(LocalDateTime.now());
+        int count = orderMapper.update(update, Wrappers.<Orders>lambdaUpdate()
+                .eq(Orders::getStatus, OrderStatus.PENDING.getCode())
+                .lt(Orders::getOrderTime, deadline));
+
+        if (count > 0) {
+            log.info("自动取消超时未接单订单 {} 笔（超过 {} 分钟未接单）", count, minutes);
+        }
+        return count;
     }
 
     private Orders requireOrder(Long id) {
@@ -427,6 +467,7 @@ public class OrderServiceImpl implements OrderService {
         orderVO.setEstimateDeliveryTime(order.getEstimateDeliveryTime());
         orderVO.setDeliveryTime(order.getDeliveryTime());
         orderVO.setCancelReason(order.getCancelReason());
+        orderVO.setRejectionReason(order.getRejectionReason());
         orderVO.setCancelTime(order.getCancelTime());
         return orderVO;
     }

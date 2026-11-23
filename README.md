@@ -4,19 +4,16 @@
 
 组员协作前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-当前版本已完成 A-E 核心模块，并通过真实 MySQL、Redis、MinIO 链路验证：
+当前版本由项目首个开发者搭建，已完成：
 
 - 仓库目录、数据库脚本和协作文档框架
 - Spring Boot 多模块后端基座
 - Vue2 管理后台和客户 H5 基础工程
 - A 负责的员工模块完整闭环
-- B 负责的分类、菜品模块与 H5 菜单浏览
-- C 负责的套餐与购物车模块（后端、B 端套餐管理页、H5 首页容器与购物车）
 - 默认管理员初始化、JWT 鉴权和统一异常处理
 - D 负责的订单与报表模块（后端、B 端订单管理/仪表盘/营业报表、H5 确认订单与订单页）
 - E 负责的客户登录和地址簿完整闭环
 - B/C/D/E 的 DTO/VO 与状态枚举契约
-- 后端 69 项自动化测试、GitHub Actions、后端 JAR 打包和两个前端生产构建
 
 ## 目录
 
@@ -45,9 +42,6 @@
 ```powershell
 docker compose up -d mysql redis minio
 ```
-
-空数据卷首次启动时，`init.sql` 和 `b_seed.sql` 会自动执行，直接得到
-分类、菜品、套餐和口味演示数据。已有数据卷不会重复初始化。
 
 2. 启动后端：
 
@@ -83,10 +77,6 @@ Windows 电脑可直接使用项目内的便携环境：
 .\scripts\dev\verify-demo.ps1
 ```
 
-首次启动且 `category` 表为空时，`start-infra.ps1` 会自动导入
-`sql/b_seed.sql`。`verify-demo.ps1` 会验证员工、MinIO、客户登录、
-地址、菜品、套餐、购物车、下单、接单、派送、完成、取消和报表。
-
 完整地址、窗口说明和下一阶段分工见
 [docs/运行验证与接力说明.md](docs/运行验证与接力说明.md)。
 
@@ -103,13 +93,14 @@ Windows 电脑可直接使用项目内的便携环境：
 ## 接口与协作
 
 - 接口契约：[docs/api.md](docs/api.md)
+- DTO/VO 契约：[docs/dto-contract.md](docs/dto-contract.md)
 - 开发计划：[docs/plan.md](docs/plan.md)
 - A 模块说明：[docs/A_员工模块交付说明.md](docs/A_员工模块交付说明.md)
 - D 模块说明：[docs/D_订单报表交付说明.md](docs/D_订单报表交付说明.md)
-- C 模块说明：[docs/C_套餐购物车交付说明.md](docs/C_套餐购物车交付说明.md)
-- C 与 B 合并记录：[docs/C_与B合并记录.md](docs/C_与B合并记录.md)
 - 运行与交接：[docs/运行验证与接力说明.md](docs/运行验证与接力说明.md)
 - 原始需求：[docs/reference/README.md](docs/reference/README.md)
 - GitHub 发布：[docs/GitHub发布与组员接入.md](docs/GitHub发布与组员接入.md)
+
+- 支付为模拟：H5 提交订单即创建订单（不接支付网关、不校验支付结果），拒单/取消都不触发退款
 
 接口、数据库字段发生变更时，需要同时更新 `docs/api.md` 和 `sql/init.sql`。

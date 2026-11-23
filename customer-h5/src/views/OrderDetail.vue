@@ -48,7 +48,9 @@
           :value="order.estimateDeliveryTime"
         />
         <van-cell v-if="order.deliveryTime" title="派送时间" :value="order.deliveryTime" />
+        <van-cell v-if="order.rejectionReason" title="拒单原因" :value="order.rejectionReason" />
         <van-cell v-if="order.cancelReason" title="取消原因" :value="order.cancelReason" />
+        <van-cell v-if="order.cancelTime" title="取消时间" :value="order.cancelTime" />
         <van-cell title="支付方式" :value="payMethodText" />
         <van-cell title="收货人" :value="order.consignee || '-'" />
         <van-cell title="联系电话" :value="order.phone || '-'" />

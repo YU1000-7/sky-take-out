@@ -1,4 +1,6 @@
+# 苍穹外卖 API 接口文档
 
+项目采用 B 端管理后台和 C 端浏览器 H5 共用一套后端。接口变更必须同步更新本文件，并通知全体成员。
 
 ## 基础约定
 
@@ -8,9 +10,6 @@
 - 请求头：`token: <JWT>`
 - 时间格式：`yyyy-MM-dd HH:mm:ss`；纯日期字段为 `yyyy-MM-dd`
 - 金额单位：分
-
-`LocalDateTime`、`LocalDate` 的 JSON 格式由 `com.sky.config.JacksonConfig` 统一注册，
-前后端都按接口文档的格式收发，不需要各自再做时间格式化。
 
 `LocalDateTime`、`LocalDate` 的 JSON 格式由 `com.sky.config.JacksonConfig` 统一注册，
 前后端都按接口文档的格式收发，不需要各自再做时间格式化。
@@ -212,116 +211,10 @@
 
 `status`：`1` 起售，`0` 停售。若该菜品被起售中的套餐关联，不允许停售。
 
-## B 端套餐模块
-
-套餐与 `setmeal_dish` 的写入在同一事务内完成；套餐内菜品为整体替换语义（修改时先删后插）。
-
-### 1. 新增套餐
-
-`POST /admin/setmeal`
-
-```json
-{
-  "name": "双人特惠餐",
-  "categoryId": 2,
-  "price": 6800,
-  "image": "http://xxx/xxx.jpg",
-  "description": "双人套餐",
-  "status": 1,
-  "setmealDishes": [
-    { "dishId": 1, "copies": 1 },
-    { "dishId": 2, "copies": 1 }
-  ]
-}
-```
-
-| 字段 | 必填 | 说明 |
-| --- | --- | --- |
-| name | 是 | 最长 64 字符 |
-| categoryId | 是 | 必须是 `category.type = 2` 的套餐分类 |
-| price | 是 | 单位分，必须大于 0 |
-| image | 否 | 图片地址，建议走公共上传接口 |
-| description | 否 | 最长 255 字符 |
-| status | 否 | 1 起售，0 停售；不传按停售处理 |
-| setmealDishes | 是 | 至少 1 个菜品，同一菜品不可重复 |
-
-响应：`{"code":1,"msg":"新增套餐成功","data":null}`
-
-### 2. 修改套餐
-
-`PUT /admin/setmeal`
-
-请求体同新增，必须携带 `id`。响应 `msg` 为 `修改成功`。
-
-### 3. 删除套餐（批量）
-
-`DELETE /admin/setmeal?ids=1,2`
-
-删除规则（不满足时返回 `code=0` 并给出原因）：
-
-1. 起售中的套餐不能删除，必须先停售。
-2. 已被客户加入购物车的套餐不能删除，建议改为停售。
-3. 已被有效订单（状态 1/2/3）引用的套餐不能删除，建议改为停售。
-
-响应：`{"code":1,"msg":"删除成功","data":null}`
-
-### 4. 套餐分页查询
-
-`GET /admin/setmeal/page`
-
-| 参数 | 必填 | 说明 |
-| --- | --- | --- |
-| page | 否 | 默认 1 |
-| pageSize | 否 | 默认 10，最大 100 |
-| name | 否 | 套餐名称模糊查询 |
-| categoryId | 否 | 套餐分类 |
-| status | 否 | 1 起售，0 停售 |
-
-响应 `data.records` 每项：
-
-```json
-{
-  "id": 1,
-  "name": "双人特惠餐",
-  "categoryId": 2,
-  "categoryName": "双人套餐",
-  "price": 6800,
-  "image": "xxx",
-  "description": "双人套餐",
-  "status": 1,
-  "updateTime": "2026-11-04 12:00:00",
-  "setmealDishes": null
-}
-```
-
-分页结果不返回 `setmealDishes`，需要详情时调用下一个接口。
-
-### 5. 根据 ID 查询套餐（含套餐菜品）
-
-`GET /admin/setmeal/{id}`
-
-`data.setmealDishes` 每项：
-
-```json
-{ "dishId": 1, "dishName": "鱼香肉丝", "copies": 1, "price": 3800, "image": "xxx", "dishStatus": 1 }
-```
-
-`dishStatus` 为菜品当前状态，菜品已被删除时为 `null`，便于后台发现套餐内已失效的菜品。
-
-### 6. 套餐起售停售
-
-`PUT /admin/setmeal/status/{status}?id={id}`
-
-`status`：`1` 起售，`0` 停售。
-
-起售时校验：套餐内必须有菜品，且所含菜品全部处于起售状态，否则返回业务异常。
-
-响应：`{"code":1,"msg":"状态修改成功","data":null}`
-
 ## B 端订单模块
 
 订单状态：`1` 待接单、`2` 已接单、`3` 派送中、`4` 已完成、`5` 已取消。
-合法流转只有 `1→2`、`2→3`、`3→4`（商家）和 `1→5`（客户取消），其余流转一律返回 `code=0` 并提示当前状态。
+合法流转只有 `1→2`、`2→3`、`3→4`（商家接单/派送/完成）、`1→5`（客户取消或商家拒单），以及系统按超时规则自动取消（`1→5`）；其余流转一律返回 `code=0` 并提示当前状态。
 
 ### 1. 后台订单分页查询
 
@@ -357,6 +250,7 @@
   "estimateDeliveryTime": "2026-11-04 12:30:00",
   "deliveryTime": null,
   "cancelReason": null,
+  "rejectionReason": null,
   "cancelTime": null
 }
 ```
@@ -399,7 +293,19 @@
 
 仅 `3` 派送中可完成，响应 `{"code":1,"msg":"订单完成","data":null}`。
 
-### 6. 统一状态流转（扩展接口）
+### 6. 商家拒单
+
+`PUT /admin/order/rejection?id={id}&rejectionReason={reason}`
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| id | 是 | 订单 ID |
+| rejectionReason | 否 | 拒单原因，最长 255 字符；留空记「商家拒单」 |
+
+仅 `1` 待接单可拒单。拒单后订单进入 `5` 已取消，原因写入 `rejectionReason`，客户在订单详情里能看到。
+响应：`{"code":1,"msg":"拒单成功","data":null}`
+
+### 7. 统一状态流转（扩展接口）
 
 `PUT /admin/order/status`
 
@@ -411,6 +317,12 @@
 
 `status` 仅支持 `2`、`3`、`4`，分别等价于接单、派送、完成；流转到 `1`/`5` 会返回业务异常。
 这个接口是接单、派送、完成三个语义化接口的统一入口，后端复用同一套状态机校验。
+
+### 订单状态补充说明
+
+- 拒单（商家）与取消（客户）都落到 `5` 已取消：商家拒单写 `rejectionReason`，客户取消写 `cancelReason`，两者都会写 `cancelTime`。
+- 超时未接单自动取消：SpringTask 每分钟扫描一次，`1` 待接单且下单超过 15 分钟仍未处理的订单自动置为 `5` 已取消，`cancelReason` 记「超时未接单，系统自动取消」。阈值与开关见 `application.yml` 的 `sky.order.auto-cancel.*`（`enabled` 关闭任务、`timeout-minutes` 调整分钟数）。
+- 退款不在本期范围：`payStatus` 只在支付环节变化（模拟支付下单即 `1` 已支付），拒单与取消都不触发真实退款。
 
 ## B 端报表统计模块
 
@@ -478,7 +390,6 @@
 `GET /user/dish/list?categoryId={id}`
 
 只返回起售菜品，元素含 `flavors`，供 H5 规格选择弹窗使用。
-
 ## C 端用户与地址簿
 
 C 端接口统一使用客户 JWT，请求头为 `token`。登录接口除外。
@@ -555,95 +466,6 @@ C 端接口统一使用客户 JWT，请求头为 `token`。登录接口除外。
 
 所有地址操作均校验 `userId`，禁止跨客户读取、修改或删除。
 
-## C 端套餐查询
-
-### 1. 根据分类 ID 查询套餐
-
-`GET /user/setmeal/list?categoryId={categoryId}`
-
-`categoryId` 可选，仅返回 `status=1` 的起售套餐；缺省时返回全部起售套餐。
-
-响应 `data`：
-
-```json
-[{ "id": 1, "name": "双人特惠餐", "categoryId": 2, "image": "xxx", "price": 6800, "description": "双人套餐" }]
-```
-
-### 2. 查询套餐内菜品
-
-`GET /user/setmeal/dish/{id}`
-
-只返回仍然存在且起售的菜品。套餐已停售时返回业务异常。
-
-响应 `data`：
-
-```json
-[{ "id": 1, "name": "鱼香肉丝", "image": "xxx", "price": 3800, "copies": 1 }]
-```
-
-## C 端购物车模块
-
-同一购物车同时支持菜品和套餐，`dishId` 与 `setmealId` 二选一。加购时写入名称、图片和单价快照，后续商品改价不影响购物车已有记录。
-
-### 1. 添加购物车
-
-`POST /user/shoppingCart`
-
-```json
-{
-  "dishId": 1,
-  "setmealId": null,
-  "dishFlavor": "微辣"
-}
-```
-
-| 规则 | 说明 |
-| --- | --- |
-| 商品标识 | `dishId`、`setmealId` 必须且只能传一个 |
-| 菜品口味 | 仅菜品使用，空串按未选口味处理 |
-| 合并规则 | 同一客户、同一菜品且同一口味合并为一条并累加数量；同一套餐合并为一条 |
-| 数量上限 | 单个商品最多 99 份 |
-| 状态校验 | 菜品或套餐必须处于起售状态 |
-
-响应：`{"code":1,"msg":"添加成功","data":null}`
-
-### 2. 购物车减少商品
-
-`PUT /user/shoppingCart/sub`
-
-请求体同上。数量减到 0 时自动移除该记录；购物车中不存在该商品时返回业务异常。
-
-响应：`{"code":1,"msg":"减少成功","data":null}`
-
-### 3. 查询购物车列表
-
-`GET /user/shoppingCart/list`
-
-响应 `data`：
-
-```json
-[
-  {
-    "id": 1,
-    "dishId": 1,
-    "setmealId": null,
-    "name": "鱼香肉丝",
-    "image": "xxx",
-    "dishFlavor": "微辣",
-    "number": 2,
-    "amount": 3800
-  }
-]
-```
-
-`amount` 为单价快照（分），订单金额按 `number * amount` 计算。`dishId`、`setmealId` 供 D 模块提交订单时区分商品类型。
-
-### 4. 清空购物车
-
-`DELETE /user/shoppingCart/clean`
-
-响应：`{"code":1,"msg":"清空购物车成功","data":null}`
-
 ## C 端订单模块
 
 下单在同一个事务内完成：校验购物车与收货地址 → 写入订单主表 → 写入订单明细 → 清空购物车。
@@ -681,6 +503,8 @@ C 端接口统一使用客户 JWT，请求头为 `token`。登录接口除外。
 
 下单后订单状态为 `1` 待接单，`payStatus` 直接置为 `1`（模拟支付成功），`estimateDeliveryTime` 为下单后 30 分钟。
 
+**支付为模拟**：不接微信/支付宝，不校验支付结果，也不需要支付回调，提交订单即创建订单；拒单与取消都不触发退款。
+
 ### 2. 用户订单分页
 
 `GET /user/order/list?page=1&pageSize=10&status=`
@@ -716,4 +540,10 @@ C 端接口统一使用客户 JWT，请求头为 `token`。登录接口除外。
 
 ## 其他模块接口
 
-当前业务模块已全部实现。尚未实现的主要增强功能是「再来一单」，后续接入前需要先在本文件登记接口与字段。
+完整接口以原始《api接口文档》为准。当前已实现的模块：
+
+- B 端：员工、分类、菜品、套餐、订单、报表、公共上传
+- C 端：用户登录、地址簿、分类与菜品浏览、套餐查询、购物车、订单
+
+尚未实现的只有「再来一单」等增强功能，接入前需要先在本文件登记接口与字段。
+未实现的接口不得由前端先行假定字段。需要增减字段时先在本文件登记。

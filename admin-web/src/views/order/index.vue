@@ -65,11 +65,14 @@
           </template>
         </el-table-column>
         <el-table-column prop="orderTime" label="下单时间" min-width="170" />
-        <el-table-column label="操作" width="170" align="center" fixed="right">
+        <el-table-column label="操作" width="210" align="center" fixed="right">
           <template slot-scope="{ row }">
             <el-button type="text" @click="openDetail(row)">详情</el-button>
             <el-button v-if="actionOf(row.status)" type="text" @click="handleAction(row)">
               {{ actionOf(row.status).label }}
+            </el-button>
+            <el-button v-if="row.status === 1" type="text" class="danger" @click="handleReject(row)">
+              拒单
             </el-button>
           </template>
         </el-table-column>
@@ -129,6 +132,12 @@
             <el-descriptions-item v-if="detail.order.cancelReason" label="取消原因">
               {{ detail.order.cancelReason }}
             </el-descriptions-item>
+            <el-descriptions-item v-if="detail.order.rejectionReason" label="拒单原因">
+              {{ detail.order.rejectionReason }}
+            </el-descriptions-item>
+            <el-descriptions-item v-if="detail.order.cancelTime" label="取消/拒单时间">
+              {{ detail.order.cancelTime }}
+            </el-descriptions-item>
           </el-descriptions>
 
           <el-table :data="detail.orderDetailList" size="small" class="detail-table">
@@ -159,6 +168,14 @@
       <span slot="footer">
         <el-button @click="dialogVisible = false">关闭</el-button>
         <el-button
+          v-if="detail.order && detail.order.status === 1"
+          type="danger"
+          plain
+          @click="handleReject(detail.order)"
+        >
+          拒单
+        </el-button>
+        <el-button
           v-if="actionOf(detail.order && detail.order.status)"
           type="primary"
           @click="handleAction(detail.order)"
@@ -176,7 +193,8 @@ import {
   confirmOrder,
   deliveryOrder,
   getOrderDetail,
-  getOrderPage
+  getOrderPage,
+  rejectOrder
 } from '../../api/order'
 import {
   ORDER_STATUS_OPTIONS,
@@ -338,6 +356,39 @@ export default {
         }
       } catch (error) {
         this.$message.error(error.message || `${action.label}失败`)
+      }
+    },
+    /**
+     * 拒单：只有待接单能拒，先把原因问出来（可留空，后端记「商家拒单」），再二次确认。
+     */
+    async handleReject(row) {
+      let rejectionReason = ''
+      try {
+        const result = await this.$prompt(
+          `拒单后订单会进入「已取消」，客户能看到拒单原因。订单号：${row.number}`,
+          '拒单原因',
+          {
+            confirmButtonText: '确认拒单',
+            cancelButtonText: '取消',
+            inputPlaceholder: '例如：菜品已售完 / 门店已打烊（可留空）',
+            inputValidator: value => !value || value.length <= 100 || '拒单原因不能超过 100 字',
+            type: 'warning'
+          }
+        )
+        rejectionReason = (result.value || '').trim()
+      } catch (error) {
+        return
+      }
+
+      try {
+        await rejectOrder(row.id, rejectionReason)
+        this.$message.success('已拒单')
+        this.loadOrders()
+        if (this.dialogVisible && this.detail.order && this.detail.order.id === row.id) {
+          await this.openDetail(row)
+        }
+      } catch (error) {
+        this.$message.error(error.message || '拒单失败')
       }
     }
   }

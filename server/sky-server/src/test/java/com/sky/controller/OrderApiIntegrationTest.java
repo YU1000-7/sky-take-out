@@ -3,6 +3,7 @@ package com.sky.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sky.common.utils.JwtUtil;
+import com.sky.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,8 @@ class OrderApiIntegrationTest {
     private JdbcTemplate jdbcTemplate;
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private OrderService orderService;
 
     @MockBean
     private StringRedisTemplate redisTemplate;
@@ -296,6 +299,57 @@ class OrderApiIntegrationTest {
         mockMvc.perform(get("/admin/report/turnover"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
+    void shouldRejectPendingOrderAndRefuseAfterConfirm() throws Exception {
+        long rejectionOrder = submitOrder();
+        mockMvc.perform(put("/admin/order/rejection").header("token", adminToken)
+                        .param("id", String.valueOf(rejectionOrder))
+                        .param("rejectionReason", "菜品已售完"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.msg").value("拒单成功"));
+
+        mockMvc.perform(get("/admin/order/details/{id}", rejectionOrder).header("token", adminToken))
+                .andExpect(jsonPath("$.data.order.status").value(5))
+                .andExpect(jsonPath("$.data.order.rejectionReason").value("菜品已售完"))
+                .andExpect(jsonPath("$.data.order.cancelTime").exists());
+
+        // 客户也能在订单详情里看到拒单原因
+        mockMvc.perform(get("/user/order/{id}", rejectionOrder).header("token", userToken))
+                .andExpect(jsonPath("$.data.order.status").value(5))
+                .andExpect(jsonPath("$.data.order.rejectionReason").value("菜品已售完"));
+
+        // 已接单的订单不能再拒单
+        insertDishCart(1, 3800L);
+        long confirmed = submitOrder();
+        mockMvc.perform(put("/admin/order/confirm").header("token", adminToken)
+                        .param("id", String.valueOf(confirmed)))
+                .andExpect(jsonPath("$.code").value(1));
+        mockMvc.perform(put("/admin/order/rejection").header("token", adminToken)
+                        .param("id", String.valueOf(confirmed)))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value(containsString("已接单")));
+    }
+
+    @Test
+    void shouldAutoCancelOrderTimeoutWithoutConfirm() throws Exception {
+        long orderId = submitOrder();
+        // 把下单时间往前挪 1 小时，模拟商家一直没接单
+        jdbcTemplate.update("update orders set order_time = ? where id = ?",
+                LocalDateTime.now().minusHours(1), orderId);
+
+        int cancelled = orderService.cancelTimeoutOrders(15);
+        assertEquals(1, cancelled);
+
+        mockMvc.perform(get("/admin/order/details/{id}", orderId).header("token", adminToken))
+                .andExpect(jsonPath("$.data.order.status").value(5))
+                .andExpect(jsonPath("$.data.order.cancelReason").value("超时未接单，系统自动取消"))
+                .andExpect(jsonPath("$.data.order.cancelTime").exists());
+
+        // 已经取消的订单不会再次被任务处理
+        assertEquals(0, orderService.cancelTimeoutOrders(15));
     }
 
     private long submitOrder() throws Exception {
