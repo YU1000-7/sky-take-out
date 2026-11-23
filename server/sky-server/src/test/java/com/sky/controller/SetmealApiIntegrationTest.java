@@ -16,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -39,6 +40,8 @@ class SetmealApiIntegrationTest {
     private static final Long DISH_1 = 1L;
     private static final Long DISH_2 = 2L;
     private static final Long DISH_STOPPED = 3L;
+    private static final Long USER_ID = 1L;
+    private static final Long ADDRESS_ID = 1L;
 
     @Autowired
     private MockMvc mockMvc;
@@ -63,6 +66,7 @@ class SetmealApiIntegrationTest {
         jdbcTemplate.update("delete from shopping_cart");
         jdbcTemplate.update("delete from order_detail");
         jdbcTemplate.update("delete from orders");
+        jdbcTemplate.update("delete from address_book");
         jdbcTemplate.update("delete from dish");
         jdbcTemplate.update("delete from category");
 
@@ -74,6 +78,11 @@ class SetmealApiIntegrationTest {
         insertDish(DISH_1, "鱼香肉丝", 3800, 1);
         insertDish(DISH_2, "宫保鸡丁", 4200, 1);
         insertDish(DISH_STOPPED, "停售小炒", 2800, 0);
+
+        jdbcTemplate.update("insert into address_book(id, user_id, consignee, phone, province_name, city_name,"
+                + " district_name, detail, is_default, create_time, update_time)"
+                + " values (?, ?, '张三', '13800138000', '江苏省', '苏州市', '姑苏区', '观前街1号', 1, now(), now())",
+                ADDRESS_ID, USER_ID);
 
         adminToken = jwtUtil.createAdminToken(1L);
     }
@@ -252,6 +261,87 @@ class SetmealApiIntegrationTest {
                         .param("ids", String.valueOf(setmealId)))
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("订单")));
+    }
+
+    /**
+     * 接口级用例一：客户真实加购 → 后台停售 → 删除仍被拒（购物车引用优先于停售状态）。
+     */
+    @Test
+    void shouldRejectDeleteAfterStoppedWhenSetmealInCartViaApi() throws Exception {
+        long setmealId = createSetmeal(1);
+
+        addSetmealToCart(setmealId);
+
+        mockMvc.perform(put("/admin/setmeal/status/0").header("token", adminToken)
+                        .param("id", String.valueOf(setmealId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        mockMvc.perform(delete("/admin/setmeal").header("token", adminToken)
+                        .param("ids", String.valueOf(setmealId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value(containsString("购物车")));
+
+        Integer left = jdbcTemplate.queryForObject(
+                "select count(1) from setmeal where id = ?", Integer.class, setmealId);
+        assertEquals(1, left.intValue(), "被购物车引用的套餐删除必须被整体拒绝");
+        Integer relationLeft = jdbcTemplate.queryForObject(
+                "select count(1) from setmeal_dish where setmeal_id = ?", Integer.class, setmealId);
+        assertEquals(2, relationLeft.intValue(), "删除被拒时套餐菜品关联不能被清理");
+    }
+
+    /**
+     * 接口级用例二：下单 → 接单 → 停售 → 删除仍被拒（有效订单引用）。
+     */
+    @Test
+    void shouldRejectDeleteAfterStoppedWhenSetmealInActiveOrderViaApi() throws Exception {
+        long setmealId = createSetmeal(1);
+
+        addSetmealToCart(setmealId);
+
+        String submitBody = """
+                {"addressBookId": %d, "payMethod": 1, "remark": "不要香菜"}
+                """.formatted(ADDRESS_ID);
+        MvcResult submitResult = mockMvc.perform(post("/user/order/submit").header("token", userToken())
+                        .contentType(MediaType.APPLICATION_JSON).content(submitBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andReturn();
+        long orderId = objectMapper.readTree(submitResult.getResponse().getContentAsString())
+                .get("data").get("orderId").asLong();
+
+        mockMvc.perform(put("/admin/order/confirm").header("token", adminToken)
+                        .param("id", String.valueOf(orderId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        Integer orderStatus = jdbcTemplate.queryForObject(
+                "select status from orders where id = ?", Integer.class, orderId);
+        assertEquals(2, orderStatus.intValue(), "接单后订单应为已接单状态");
+
+        mockMvc.perform(put("/admin/setmeal/status/0").header("token", adminToken)
+                        .param("id", String.valueOf(setmealId)))
+                .andExpect(jsonPath("$.code").value(1));
+
+        mockMvc.perform(delete("/admin/setmeal").header("token", adminToken)
+                        .param("ids", String.valueOf(setmealId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value(containsString("订单")));
+
+        Integer left = jdbcTemplate.queryForObject(
+                "select count(1) from setmeal where id = ?", Integer.class, setmealId);
+        assertEquals(1, left.intValue(), "被有效订单引用的套餐删除必须被整体拒绝");
+    }
+
+    private void addSetmealToCart(long setmealId) throws Exception {
+        mockMvc.perform(post("/user/shoppingCart").header("token", userToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                java.util.Map.of("setmealId", setmealId))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
     }
 
     private void insertDish(Long id, String name, long price, int status) {

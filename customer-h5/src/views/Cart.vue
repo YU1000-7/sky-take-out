@@ -134,7 +134,8 @@ export default {
       }
     },
     checkout() {
-      Toast('确认订单页由 D 模块接入，购物车数据已按订单口径返回')
+      // 进入确认订单页（Checkout 会重新拉取购物车，避免使用过期快照）
+      this.$router.push('/checkout')
     },
     goHome() {
       this.$router.push('/home')
